@@ -1,0 +1,35 @@
+# ============================================================
+# SOC[3] Custom Detection Rules — local.rules
+# Project: Network Intrusion Detection & Traffic Forensics
+# Author: [Your Name] | M.Tech Information Security
+# Date: 2026-02-25
+# Suricata Version: 8.0.3
+# ============================================================
+# Rule naming convention: SID 9000001–9000005 (custom range)
+# HOME_NET defined as 192.168.56.0/24 in suricata.yaml
+# ============================================================
+
+# SID 9000001 — ICMP Ping Sweep Detection (Reconnaissance)
+# Fires when a single source sends 5+ ICMP Echo Requests within 10 seconds
+# Rationale: Normal ping = 1-4 packets; sweep = rapid burst from scanner
+alert icmp any any -> $HOME_NET any (msg:"SOC-LAB ICMP Ping Sweep Detected"; itype:8; threshold:type threshold, track by_src, count 5, seconds 10; sid:9000001; rev:1;)
+
+# SID 9000002 — Nmap SYN Port Scan Detection
+# Fires when a single source sends 20+ SYN packets within 3 seconds
+# Rationale: Nmap -sS sends hundreds of SYNs/sec to enumerate open ports
+alert tcp any any -> $HOME_NET any (msg:"SOC-LAB Nmap SYN Scan Detected"; flags:S; threshold:type threshold, track by_src, count 20, seconds 3; sid:9000002; rev:1;)
+
+# SID 9000003 — SSH Brute Force Attempt Detection
+# Fires when a single source makes 5+ SYN connections to port 22 within 60 seconds
+# Rationale: Human SSH retries are rare; 5+ in 60s = automated credential tool (Hydra, Medusa)
+alert tcp any any -> $HOME_NET 22 (msg:"SOC-LAB SSH Brute Force Attempt"; flags:S; threshold:type threshold, track by_src, count 5, seconds 60; sid:9000003; rev:1;)
+
+# SID 9000004 — Suspicious HTTP User-Agent (curl/Scanner)
+# Fires on any HTTP request with "curl" in the User-Agent string
+# Rationale: curl is not a browser; its presence in HTTP traffic = script, scanner, or automation
+alert http any any -> $HOME_NET any (msg:"SOC-LAB Suspicious HTTP User-Agent Detected"; http.user_agent; content:"curl"; sid:9000004; rev:1;)
+
+# SID 9000005 — TCP Flood / DoS Pattern
+# Fires when a single source sends 100+ SYN packets within 5 seconds
+# Rationale: This rate far exceeds any legitimate connection pattern; indicates DoS or aggressive scanning
+alert tcp any any -> $HOME_NET any (msg:"SOC-LAB TCP Flood DoS Pattern"; flags:S; threshold:type threshold, track by_src, count 100, seconds 5; sid:9000005; rev:1;)
